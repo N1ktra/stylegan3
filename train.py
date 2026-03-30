@@ -21,7 +21,9 @@ from training import training_loop
 from metrics import metric_main
 from torch_utils import training_stats
 from torch_utils import custom_ops
-
+import os
+# Fix für 'uint32_t' Fehler bei der Plugin-Kompilierung
+os.environ['CXXFLAGS'] = '-include stdint.h'
 #----------------------------------------------------------------------------
 
 def subprocess_fn(rank, c, temp_dir):
