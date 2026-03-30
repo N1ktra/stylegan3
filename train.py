@@ -22,8 +22,8 @@ from metrics import metric_main
 from torch_utils import training_stats
 from torch_utils import custom_ops
 import os
-# Fix für 'uint32_t' Fehler bei der Plugin-Kompilierung
-os.environ['CXXFLAGS'] = '-include stdint.h'
+os.environ['TORCH_CUDA_ARCH_LIST'] = '7.5' # Speziell für deine RTX 2080 Ti auf Euler
+os.environ['NVCC_APPEND_FLAGS'] = '-include cstdint'
 #----------------------------------------------------------------------------
 
 def subprocess_fn(rank, c, temp_dir):
