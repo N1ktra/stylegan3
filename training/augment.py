@@ -363,11 +363,17 @@ class AugmentPipe(torch.nn.Module):
             images = images.reshape([batch_size, num_channels, height * width])
             if num_channels == 3:
                 images = C[:, :3, :3] @ images + C[:, :3, 3:]
+            elif num_channels == 4: # NEU: Unterstützung für RGBA
+                # Nur RGB (Kanäle 0,1,2) transformieren
+                rgb = images[:, :3, :]
+                rgb = C[:, :3, :3] @ rgb + C[:, :3, 3:]
+                # Mit dem unveränderten Alpha-Kanal (Kanal 3) wieder zusammenfügen
+                images = torch.cat([rgb, images[:, 3:, :]], dim=1)
             elif num_channels == 1:
                 C = C[:, :3, :].mean(dim=1, keepdims=True)
                 images = images * C[:, :, :3].sum(dim=2, keepdims=True) + C[:, :, 3:]
             else:
-                raise ValueError('Image must be RGB (3 channels) or L (1 channel)')
+                raise ValueError('Image must be RGB (3 channels), RGBA (4 channels) or L (1 channel)')
             images = images.reshape([batch_size, num_channels, height, width])
 
         # ----------------------
@@ -414,7 +420,12 @@ class AugmentPipe(torch.nn.Module):
             sigma = torch.where(torch.rand([batch_size, 1, 1, 1], device=device) < self.noise * self.p, sigma, torch.zeros_like(sigma))
             if debug_percentile is not None:
                 sigma = torch.full_like(sigma, torch.erfinv(debug_percentile) * self.noise_std)
-            images = images + torch.randn([batch_size, num_channels, height, width], device=device) * sigma
+            # Rauschen generieren
+            noise_tensor = torch.randn([batch_size, num_channels, height, width], device=device) * sigma
+            if num_channels == 4:
+                # Rauschen für den Alpha-Kanal eliminieren
+                noise_tensor[:, 3:, :, :] = 0
+            images = images + noise_tensor
 
         # Apply cutout with probability (cutout * strength).
         if self.cutout > 0:
